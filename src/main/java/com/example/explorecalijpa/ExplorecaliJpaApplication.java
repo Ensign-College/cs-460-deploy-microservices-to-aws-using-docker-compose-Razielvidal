@@ -6,6 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 
 import com.example.explorecalijpa.business.TourPackageService;
 import com.example.explorecalijpa.business.TourService;
@@ -14,26 +15,24 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 
 @SpringBootApplication
+@ComponentScan({ "com.example", "edu.ensign.cs460" })
 public class ExplorecaliJpaApplication implements CommandLineRunner {
- 
+
     @Bean
     public OpenAPI swaggerHeader() {
         return new OpenAPI()
-            .info((new Info())
-            .description("Services for the Explore California Relational Database.")
-            .title(StringUtils.substringBefore(getClass().getSimpleName(), "$"))
-            .version("3.0.0"));
+                .info((new Info())
+                        .description("Services for the Explore California Relational Database.")
+                        .title(StringUtils.substringBefore(getClass().getSimpleName(), "$"))
+                        .version("3.0.0"));
     }
-    
 
     @Autowired
     private TourPackageService tourPackageService;
-
     @Autowired
     private TourService tourService;
 
     public static void main(String[] args) {
-
         SpringApplication.run(ExplorecaliJpaApplication.class, args);
     }
 
