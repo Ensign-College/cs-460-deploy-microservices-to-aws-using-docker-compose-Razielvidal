@@ -3,23 +3,27 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.2.5</version>
-		<relativePath /> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
+
 	<groupId>com.example</groupId>
 	<artifactId>explorecali-jpa</artifactId>
 	<version>3.0.0</version>
 	<name>explorecali-jpa</name>
 	<description>Explore California Relational Database Microservice</description>
+
 	<properties>
 		<java.version>21</java.version>
-		<!-- Define application entry point for the jar plugin -->
 		<start-class>com.example.explorecalijpa.ExplorecaliJpaApplication</start-class>
 	</properties>
+
 	<dependencies>
+		<!-- Spring Data / Web / REST -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -33,6 +37,13 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- NEW: Spring Security runtime -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!-- DB / tools -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
@@ -46,11 +57,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
@@ -73,12 +79,6 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.httpcomponents.client5</groupId>
-			<artifactId>httpclient5</artifactId>
-			<version>5.2.1</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
 			<version>9.22.3</version>
@@ -87,6 +87,25 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
 			<version>8.4.4</version>
+		</dependency>
+
+		<!-- Test -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- NEW: Spring Security test helpers -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+			<version>5.2.1</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
@@ -111,17 +130,13 @@
 				<version>3.4.6</version>
 				<configuration>
 					<from>
-						<!-- Pin the base image to a specific digest for reproducible builds -->
-						<image>
-							eclipse-temurin:21-jre-ubi9-minimal@sha256:e0934bc033d962fb9e15bd82893397c143f9f82e9ff44b5c6fefaa30e2d4af67</image>
+						<image>eclipse-temurin:21-jre-ubi9-minimal@sha256:e0934bc033d962fb9e15bd82893397c143f9f82e9ff44b5c6fefaa30e2d4af67</image>
 					</from>
 					<to>
-						<!-- Explicit image name to avoid default tagging warnings -->
 						<image>explorecali-jpa:${project.version}</image>
 					</to>
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
