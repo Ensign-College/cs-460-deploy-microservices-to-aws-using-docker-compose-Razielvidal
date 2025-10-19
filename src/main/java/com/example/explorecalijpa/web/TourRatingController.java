@@ -4,6 +4,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import jakarta.validation.Valid;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,129 +21,127 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.explorecalijpa.business.TourRatingService;
+import com.example.explorecalijpa.config.FeatureFlagService;
 import com.example.explorecalijpa.model.TourRating;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
 
 /**
- * Tour Rating Controller
+ * Tour Rating REST Controller.
  *
- * Created by Mary Ellen Bowman
+ * Security expectations (from SecurityConfig):
+ * - USER can GET (reads)
+ * - ADMIN required for POST/PUT/PATCH/DELETE (writes)
  */
 @RestController
-@Slf4j
-@Tag(name = "Tour Rating", description = "The Rating for a Tour API")
-@RequestMapping(path = "/tours/{tourId}/ratings")
+@RequestMapping("/tours/{tourId}/ratings")
 public class TourRatingController {
-  private TourRatingService tourRatingService;
 
-  public TourRatingController(TourRatingService tourRatingService) {
+  private static final Logger log = LoggerFactory.getLogger(TourRatingController.class);
+
+  private final TourRatingService tourRatingService;
+  private final FeatureFlagService featureFlagService;
+
+  public TourRatingController(TourRatingService tourRatingService,
+      FeatureFlagService featureFlagService) {
     this.tourRatingService = tourRatingService;
+    this.featureFlagService = featureFlagService;
   }
 
-  /**
-   * Create a Tour Rating.
-   *
-   * @param tourId
-   * @param ratingDto
-   */
-  @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
-  @Operation(summary = "Create a Tour Rating")
-  public RatingDto createTourRating(@PathVariable(value = "tourId") int tourId,
-      @RequestBody @Valid RatingDto ratingDto) {
-    log.info("POST /tours/{}/ratings ", tourId);
-    TourRating rating = tourRatingService.createNew(tourId, ratingDto.getCustomerId(), 
-        ratingDto.getScore(), ratingDto.getComment());
-    return new RatingDto(rating);
+  /** Guard: ensures ratings endpoints are enabled via feature flag. */
+  private void checkRatingsEnabled() {
+    if (!featureFlagService.isEnabled("tour-ratings")) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tour ratings feature disabled");
+    }
   }
+
+  // --------- READS (USER allowed) ---------
 
   @GetMapping
   @Operation(summary = "Lookup All Ratings for a Tour")
-  public List<RatingDto> getAllRatingsForTour(@PathVariable(value = "tourId") int tourId) {
+  public List<RatingDto> getAllRatingsForTour(@PathVariable("tourId") int tourId) {
+    checkRatingsEnabled();
     log.info("GET /tours/{}/ratings", tourId);
     List<TourRating> tourRatings = tourRatingService.lookupRatings(tourId);
     return tourRatings.stream().map(RatingDto::new).toList();
   }
 
-  /**
-   * Calculate the average Score of a Tour.
-   *
-   * @param tourId
-   * @return the average value.
-   */
   @GetMapping("/average")
-  @Operation(summary = "Get the Average Score for a Tour")
-  public Map<String, Double> getAverage(@PathVariable(value = "tourId") int tourId) {
+  @Operation(summary = "Get Average Score for a Tour")
+  public Map<String, Double> getAverage(@PathVariable("tourId") int tourId) {
+    checkRatingsEnabled();
     log.info("GET /tours/{}/ratings/average", tourId);
     return Map.of("average", tourRatingService.getAverageScore(tourId));
   }
 
-  /**
-   * Update score and comment of a Tour Rating
-   *
-   * @param tourId
-   * @param ratingDto
-   * @return The modified Rating DTO.
-   */
-  @PutMapping
-  @Operation(summary = "Modify All Tour Rating Attributes")
-  public RatingDto updateWithPut(@PathVariable(value = "tourId") int tourId, @RequestBody @Valid RatingDto ratingDto) {
-    log.info("PUT /tours/{}/ratings", tourId);
-    return new RatingDto(tourRatingService.update(tourId, ratingDto.getCustomerId(),
-                ratingDto.getScore(), ratingDto.getComment()));
+  // --------- WRITES (ADMIN required) ---------
+
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  @Operation(summary = "Create a Rating for a Tour")
+  public RatingDto createTourRating(@PathVariable("tourId") int tourId,
+      @Valid @RequestBody RatingDto ratingDto) {
+    checkRatingsEnabled();
+    log.info("POST /tours/{}/ratings  body={}", tourId, ratingDto);
+    TourRating rating = tourRatingService.createNew(
+        tourId,
+        ratingDto.getCustomerId(),
+        ratingDto.getScore(),
+        ratingDto.getComment());
+    return new RatingDto(rating);
   }
 
-  /**
-   * Update score or comment of a Tour Rating
-   *
-   * @param tourId
-   * @param ratingDto
-   * @return The modified Rating DTO.
-   */
+  @PutMapping
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(summary = "Update a Rating (PUT)")
+  public void updateWithPut(@PathVariable("tourId") int tourId,
+      @Valid @RequestBody RatingDto ratingDto) {
+    checkRatingsEnabled();
+    log.info("PUT /tours/{}/ratings  body={}", tourId, ratingDto);
+    tourRatingService.update(
+        tourId,
+        ratingDto.getCustomerId(),
+        ratingDto.getScore(),
+        ratingDto.getComment());
+  }
+
   @PatchMapping
-  @Operation(summary = "Modify Some Tour Rating Attributes")
-  public RatingDto updateWithPatch(@PathVariable(value = "tourId") int tourId,
-      @RequestBody @Valid RatingDto ratingDto) {
-    log.info("PATCH /tours/{}/ratings", tourId);
-    return new RatingDto(tourRatingService.updateSome(tourId,
+  @Operation(summary = "Partially Update a Rating (PATCH)")
+  public RatingDto updateWithPatch(@PathVariable("tourId") int tourId,
+      @RequestBody RatingDto ratingDto) {
+    checkRatingsEnabled();
+    log.info("PATCH /tours/{}/ratings  body={}", tourId, ratingDto);
+    // Your RatingDto likely has nullable getters (no Optional methods).
+    // Wrap them here before calling the service:
+    TourRating updated = tourRatingService.updateSome(
+        tourId,
         ratingDto.getCustomerId(),
         Optional.ofNullable(ratingDto.getScore()),
-        Optional.ofNullable(ratingDto.getComment())));
+        Optional.ofNullable(ratingDto.getComment()));
+    return new RatingDto(updated);
   }
 
-  /**
-   * Delete a Rating of a tour made by a customer
-   *
-   * @param tourId
-   * @param customerId
-   */
   @DeleteMapping("/{customerId}")
-  @Operation(summary = "Delete a Customer's Rating of a Tour")
-  public void delete(@PathVariable(value = "tourId") int tourId, @PathVariable(value = "customerId") int customerId) {
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @Operation(summary = "Delete a Rating by Customer")
+  public void delete(@PathVariable("tourId") int tourId,
+      @PathVariable("customerId") int customerId) {
+    checkRatingsEnabled();
     log.info("DELETE /tours/{}/ratings/{}", tourId, customerId);
     tourRatingService.delete(tourId, customerId);
   }
 
-  /**
-   * Create Several Tour Ratings for one tour, score and several customers.
-   *
-   * @param tourId
-   * @param score
-   * @param customers
-   */
   @PostMapping("/batch")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(summary = "Give Many Tours Same Score")
-  public void createManyTourRatings(@PathVariable(value = "tourId") int tourId,
-                                    @RequestParam(value = "score") int score,
-                                    @RequestBody List<Integer> customers) {
-    log.info("POST /tours/{}/ratings/batch", tourId);
+  public void createManyTourRatings(@PathVariable("tourId") int tourId,
+      @RequestParam("score") int score,
+      @RequestBody List<Integer> customers) {
+    checkRatingsEnabled();
+    log.info("POST /tours/{}/ratings/batch score={} customers={}", tourId, score, customers);
     tourRatingService.rateMany(tourId, score, customers);
   }
 }

@@ -2,7 +2,9 @@ package com.example.explorecalijpa.web;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
@@ -17,7 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import com.example.explorecalijpa.business.TourRatingService;
 import com.example.explorecalijpa.model.Tour;
@@ -31,7 +34,9 @@ import jakarta.validation.ConstraintViolationException;
  * - ADMIN: required for POST/PUT/PATCH/DELETE /tours/**
  * Includes one negative test (USER POST -> 403) for the rubric.
  */
-@SpringBootTest(webEnvironment = RANDOM_PORT)
+@SpringBootTest(webEnvironment = RANDOM_PORT, properties = "features.tour-ratings=true" // <-- force feature ON for
+                                                                                        // these tests
+)
 public class TourRatingControllerTest {
 
   // These Tour and rating id's do not already exist in the db
@@ -97,8 +102,7 @@ public class TourRatingControllerTest {
     verify(serviceMock).getAverageScore(TOUR_ID);
   }
 
-  // PATCH testing works when Apache HttpClient is on the test classpath (you
-  // likely already have it).
+  // PATCH testing works when Apache HttpClient is on the test classpath.
   @Test
   void testUpdateWithPatch() {
     // Mutations require ADMIN
@@ -123,7 +127,6 @@ public class TourRatingControllerTest {
   }
 
   /** Unhappy paths to validate GlobalExceptionHandler */
-
   @Test
   public void test404() {
     // Reads allowed for USER
